@@ -28,6 +28,31 @@ console.log(Images.find().count());
 
 if(Meteor.isClient)
 {
+	Session.set("imageLimit", 8);
+	lastScrollTop=0;
+
+	$(window).scroll(function(event){	
+		//test if we are near the bottom of the window
+		if($(window).scrollTop() + $(window).height() > $(document).height() - 100){
+			//console.log(new Date());
+			
+			// where are we in the page?
+			var scrollTop = $(this).scrollTop();
+			//test if we are going down
+			if (scrollTop > lastScrollTop){
+				//yes, we are heading down...
+				Session.set("imageLimit", Session.get("imageLimit") + 4);
+			}
+			lastScrollTop = scrollTop;
+
+		}
+		
+	});
+
+	Accounts.ui.config({
+		passwordSignupFields: "USERNAME_AND_EMAIL" //display email and user name
+
+	});
 
 
 	var img_data = 
@@ -52,9 +77,57 @@ if(Meteor.isClient)
 	//Template.images.helpers({images:img_data});
 
 	//Template.images.helpers({images:Images.find()});
-	Template.images.helpers({images:Images.find({}, {sort:{createdOn:-1, rating:-1}})}); 
+	Template.images.helpers({
+		images:function(){
+			if (Session.get("userFilter")){ //they set a filter
+				return Images.find({createdBy:Session.get("userFilter")}, {sort:{createdOn:-1, rating:-1}})
+			}
+			else{
+				return Images.find({}, {sort:{createdOn:-1, rating:-1}, limit:Session.get("imageLimit")})
+			}
+			//return Images.find({}, {sort:{createdOn:-1, rating:-1}})
+		},
+		filtering_images:function(){
+			if (Session.get("userFilter")){ //they set a filter
+				return true;
+			}
+			else{
+				return false;
+			}
+		},
+		getFilterUser:function(){
+			if (Session.get("userFilter")){ //they set a filter
+				var user = Meteor.users.findOne({_id:Session.get("userFilter")});
+				return user.username;
+			}
+			else{
+				return false;
+			}
+		},
+		getUser:function(user_id){
+			var user = Meteor.users.findOne({_id:user_id});
+			if (user){
+				return user.username;
+			}
+			else{
+				return "anonymous";
+			}
+		}
+	}); 
 	//-1 instead of lowest rating first it means do it the opposite way around. So basically it's going to sort negatively by ratings.
 	//it sorts now first by the date and then by the rating
+
+	Template.body.helpers({username:function(){
+			if(Meteor.user()){
+				return Meteor.user().username;
+				//return Meteor.user().emails[0].address;
+			}
+			else{
+				return "anonymous internet user";
+			}
+		}
+	});
+
 	Template.images.events({
 		'click .js-image':function(event){
 			console.log(event);
@@ -81,7 +154,14 @@ if(Meteor.isClient)
 			//console.log(Images.find({"rating":4}));
 		},
 		'click .js-show-image-form':function(event){
-			$("#image_form_modal").modal('show');
+			$("#image_add_form").modal('show');
+		},
+		'click .js-set-image-filter':function(event){
+			Session.set("userFilter", this.createdBy); 
+			//session allows to store temporary variables, so that we can use them in app to remember what kind of state the app is in.
+		},
+		'click .js-unset-image-filter':function(event){
+			Session.set("userFilter", undefined);
 		}
 	});
 
@@ -92,11 +172,15 @@ if(Meteor.isClient)
 			img_alt = event.target.img_alt.value;
 			console.log("src: "+img_src+", alt: "+img_alt);
 
-			Images.insert({
-				img_src:img_src,
-				img_alt:img_alt,
-				createdOn:new Date()
-			})
+			if(Meteor.user()){
+				Images.insert({
+					img_src:img_src,
+					img_alt:img_alt,
+					createdOn:new Date(),
+					createdBy:Meteor.user()._id
+				});
+			}
+			
 			$('#image_form_modal').modal('hide');
 			return false;
 		}
