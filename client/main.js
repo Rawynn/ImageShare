@@ -14,7 +14,7 @@ Template.hello.helpers({
   },
 });
 
-Template.hello.events({
+/*Template.hello.events({
   'click button'(event, instance) {
     // increment the counter when button is clicked
     instance.counter.set(instance.counter.get() + 1);
@@ -23,11 +23,46 @@ Template.hello.events({
 
 console.log("I am the client");
 
-Images = new Mongo.Collection("images");
-console.log(Images.find().count());
+//Images = new Mongo.Collection("images"); //moved to share folder
+console.log(Images.find().count()); */
 
-if(Meteor.isClient)
+if(Meteor.isClient) // not needed
 {
+	//routing
+	Router.configure({
+		layoutTemplate: 'ApplicationLayout'
+	});
+
+	Router.route('/', function () {
+	  this.render('welcome',{
+	  	to:"main"
+	  });
+	});
+
+	Router.route('/images', function () {
+	  this.render('navbar',{
+	  	to:"navbar"
+	  });
+	  this.render('images',{
+	  	to:"main"
+	  });
+	});
+
+	Router.route('/image/:_id', function () {
+	  this.render('navbar',{
+	  	to:"navbar"
+	  });
+	  this.render('image',{
+	  	to:"main",
+	  	data:function(){
+	  		return Images.findOne({_id:this.params._id})
+	  	}
+	  });
+	});
+
+
+
+	//infiniscroll
 	Session.set("imageLimit", 8);
 	lastScrollTop=0;
 
@@ -48,6 +83,8 @@ if(Meteor.isClient)
 		}
 		
 	});
+
+// accounts config
 
 	Accounts.ui.config({
 		passwordSignupFields: "USERNAME_AND_EMAIL" //display email and user name
@@ -77,6 +114,11 @@ if(Meteor.isClient)
 	//Template.images.helpers({images:img_data});
 
 	//Template.images.helpers({images:Images.find()});
+
+
+//sorting, filters and finding user by id
+
+
 	Template.images.helpers({
 		images:function(){
 			if (Session.get("userFilter")){ //they set a filter
@@ -86,6 +128,9 @@ if(Meteor.isClient)
 				return Images.find({}, {sort:{createdOn:-1, rating:-1}, limit:Session.get("imageLimit")})
 			}
 			//return Images.find({}, {sort:{createdOn:-1, rating:-1}})
+		
+		//-1 instead of lowest rating first it means do it the opposite way around. So basically it's going to sort negatively by ratings.
+		//it sorts now first by the date and then by the rating
 		},
 		filtering_images:function(){
 			if (Session.get("userFilter")){ //they set a filter
@@ -114,8 +159,7 @@ if(Meteor.isClient)
 			}
 		}
 	}); 
-	//-1 instead of lowest rating first it means do it the opposite way around. So basically it's going to sort negatively by ratings.
-	//it sorts now first by the date and then by the rating
+
 
 	Template.body.helpers({username:function(){
 			if(Meteor.user()){
@@ -128,11 +172,12 @@ if(Meteor.isClient)
 		}
 	});
 
-	Template.images.events({
-		'click .js-image':function(event){
+	Template.images.events({ //manipulate the css when clicked image - it shrinks
+	/*	'click .js-image':function(event){
 			console.log(event);
 			$(event.target).css("width","50px");
-		},
+		},*/
+		//remove image function
 		'click .js-del-image':function(event){
 			var image_id=this._id;
 			console.log(image_id);
@@ -141,6 +186,7 @@ if(Meteor.isClient)
 			}) //the function passed to hide gets called when hide finishes
 			
 		},
+		//rate image function
 		'click .js-rate-image':function(event){
 			console.log("you clicked a star");
 			var rating = $(event.currentTarget).data("userrating");
@@ -165,6 +211,7 @@ if(Meteor.isClient)
 		}
 	});
 
+//uploading an image
 	Template.image_add_form.events({
 		'submit .js-add-image':function(event){
 			var img_src, img_alt;

@@ -5,7 +5,7 @@ Meteor.startup(() => {
 
   console.log("I am the server");
 
-  Images = new Mongo.Collection("images");
+  //Images = new Mongo.Collection("images"); //moved to share folder
   console.log(Images.find().count());
 
   if(Images.find().count() == 0){
